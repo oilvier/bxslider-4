@@ -1,7 +1,8 @@
 /**
- * bxSlider v4.2.12
+ * bxSlider v4.2.5 - Modified by Alteo
  * Copyright 2013-2015 Steven Wanderski
  * Written while drinking Belgian ales and listening to jazz
+
  * Licensed under MIT (http://opensource.org/licenses/MIT)
  */
 
@@ -89,7 +90,7 @@
     onSlideNext: function() { return true; },
     onSlidePrev: function() { return true; },
     onSliderResize: function() { return true; },
-	onAutoChange: function() { return true; } //calls when auto slides starts and stops
+    onAutoChange: function() { return true; } //calls when auto slides starts and stops
   };
 
   $.fn.bxSlider = function(options) {
@@ -112,7 +113,10 @@
     el = this,
     // get the original window dimens (thanks a lot IE)
     windowWidth = $(window).width(),
-    windowHeight = $(window).height();
+    windowHeight = $(window).height(),
+    
+    //@Alteo : ajout pour compatibilité avec zoom sur la taille de police
+    windowFontSize = $('html').css('fontSize');
 
     // Return if slider is already initialized
     if ($(el).data('bxSlider')) { return; }
@@ -226,9 +230,17 @@
       slider.viewport.parent().css({
         maxWidth: getViewportMaxWidth()
       });
+
+      // make modification to the wrapper (.bx-wrapper)
+      if (!slider.settings.pager && !slider.settings.controls) {
+        slider.viewport.parent().css({
+          margin: '0 auto'
+        });
+      }
+
       // apply css to all slider children
       slider.children.css({
-        // the float attribute is a reserved word in compressors like YUI compressor and need to be quoted #48
+      // the float attribute is a reserved word in compressors like YUI compressor and need to be quoted #48
         'float': slider.settings.mode === 'horizontal' ? 'left' : 'none',
         listStyle: 'none',
         position: 'relative'
@@ -275,13 +287,13 @@
     };
 
     var loadElements = function(selector, callback) {
-      var total = selector.find('img:not([src=""]), iframe').length,
+      var total = selector.find('img:not([src=""]):not([data-srcset]), iframe').length,
       count = 0;
       if (total === 0) {
         callback();
         return;
       }
-      selector.find('img:not([src=""]), iframe').each(function() {
+      selector.find('img:not([src=""]):not([data-srcset]), iframe').each(function() {
         $(this).one('load error', function() {
           if (++count === total) { callback(); }
         }).each(function() {
@@ -477,7 +489,7 @@
             breakPoint = counter + getNumberSlidesShowing();
             counter += slider.settings.moveSlides <= getNumberSlidesShowing() ? slider.settings.moveSlides : getNumberSlidesShowing();
           }
-		  return counter;
+      return counter;
         }
       // if moveSlides is 0 (auto) divide children length by sides showing, then round up
       } else {
@@ -666,8 +678,8 @@
      * Appends prev / next controls to the controls element
      */
     var appendControls = function() {
-      slider.controls.next = $('<a class="bx-next" href="">' + slider.settings.nextText + '</a>');
-      slider.controls.prev = $('<a class="bx-prev" href="">' + slider.settings.prevText + '</a>');
+      slider.controls.next = $('<button type="button"><span class="i-slide-next i-txt bx-next">' + slider.settings.nextText + '</span></button>');
+      slider.controls.prev = $('<button type="button"><span class="i-slide-prev i-txt bx-prev">' + slider.settings.prevText + '</span></button>');
       // bind click actions to the controls
       slider.controls.next.bind('click touchend', clickNextBind);
       slider.controls.prev.bind('click touchend', clickPrevBind);
@@ -897,9 +909,13 @@
         }
       }
     };
-	/* auto start and stop functions */
-	var windowFocusHandler = function() { el.startAuto(); };
-	var windowBlurHandler = function() { el.stopAuto(); };
+  
+  /* auto start and stop functions */
+  var windowFocusHandler = function() { el.startAuto(); };
+  var windowBlurHandler = function() { el.stopAuto(); };
+
+
+
     /**
      * Initializes the auto process
      */
@@ -912,7 +928,7 @@
         el.startAuto();
 
         //add focus and blur events to ensure its running if timeout gets paused
-        $(window).focus(windowFocusHandler).blur(windowBlurHandler);
+    $(window).focus(windowFocusHandler).blur(windowBlurHandler);
       }
       // if autoHover is requested
       if (slider.settings.autoHover) {
@@ -1247,13 +1263,19 @@
       if (slider.working) {
         window.setTimeout(resizeWindow, 10);
       } else {
+       
         // get the new window dimens (again, thank you IE)
         var windowWidthNew = $(window).width(),
-        windowHeightNew = $(window).height();
+            windowHeightNew = $(window).height();
+
+            //@Alteo : ajout pour compatibilité avec zoom sur la taille de police
+        var changeFontSize = $('html').css('fontSize');
+        var fontSizeNew = parseInt(changeFontSize,10);
+
         // make sure that it is a true window resize
         // *we must check this because our dinosaur friend IE fires a window resize event when certain DOM elements
         // are resized. Can you just die already?*
-        if (windowWidth !== windowWidthNew || windowHeight !== windowHeightNew) {
+        if (windowWidth !== windowWidthNew || windowHeight !== windowHeightNew || windowFontSize !== fontSizeNew) {
           // set the new window dimens
           windowWidth = windowWidthNew;
           windowHeight = windowHeightNew;
@@ -1326,6 +1348,7 @@
      *  - INTERNAL USE ONLY - the direction of travel ("prev" / "next")
      */
     el.goToSlide = function(slideIndex, direction) {
+
       // onSlideBefore, onSlideNext, onSlidePrev callbacks
       // Allow transition canceling based on returned value
       var performTransition = true,
@@ -1338,8 +1361,9 @@
       //set new index
       slider.active.index = setSlideIndex(slideIndex);
 
+
       // if plugin is currently in motion, ignore request
-      if (slider.working || slider.active.index === slider.oldIndex) { return; }
+     if (slider.working || slider.active.index === slider.oldIndex) { return; }
       // declare that plugin is in motion
       slider.working = true;
 
@@ -1428,8 +1452,9 @@
           value = slider.settings.mode === 'horizontal' ? -(position.left - moveBy) : -position.top;
           // plugin values to be animated
           setPositionProperty(value, 'slide', slider.settings.speed);
-        }
-        slider.working = false;
+        } 
+    slider.working = false;
+
       }
       if (slider.settings.ariaHidden) { applyAriaHiddenAttributes(slider.active.index * getMoveBy()); }
     };
@@ -1440,7 +1465,7 @@
     el.goToNextSlide = function() {
       // if infiniteLoop is false and last page is showing, disregard call
       if (!slider.settings.infiniteLoop && slider.active.last) { return; }
-	  if (slider.working == true){ return ;}
+    if (slider.working == true){ return ;}
       var pagerIndex = parseInt(slider.active.index) + 1;
       el.goToSlide(pagerIndex, 'next');
     };
@@ -1451,7 +1476,7 @@
     el.goToPrevSlide = function() {
       // if infiniteLoop is false and last page is showing, disregard call
       if (!slider.settings.infiniteLoop && slider.active.index === 0) { return; }
-	  if (slider.working == true){ return ;}
+    if (slider.working == true){ return ;}
       var pagerIndex = parseInt(slider.active.index) - 1;
       el.goToSlide(pagerIndex, 'prev');
     };
@@ -1473,8 +1498,9 @@
           el.goToPrevSlide();
         }
       }, slider.settings.pause);
-	  //allback for when the auto rotate status changes
-	  slider.settings.onAutoChange.call(el, true);
+    //callback for when the auto rotate status changes
+    slider.settings.onAutoChange.call(el, true);
+
       // if auto controls are displayed and preventControlUpdate is not true
       if (slider.settings.autoControls && preventControlUpdate !== true) { updateAutoControls('stop'); }
     };
@@ -1491,8 +1517,8 @@
       // clear the interval
       clearInterval(slider.interval);
       slider.interval = null;
-	  //allback for when the auto rotate status changes
-	  slider.settings.onAutoChange.call(el, false);
+      //callback for when the auto rotate status changes
+      slider.settings.onAutoChange.call(el, false);
       // if auto controls are displayed and preventControlUpdate is not true
       if (slider.settings.autoControls && preventControlUpdate !== true) { updateAutoControls('start'); }
     };
@@ -1589,8 +1615,9 @@
       if (slider.settings.keyboardEnabled) { $(document).unbind('keydown', keyPress); }
       //remove self reference in data
       $(this).removeData('bxSlider');
-	  // remove global window handlers
-	  $(window).off('blur', windowBlurHandler).off('focus', windowFocusHandler);
+    // remove global window handlers
+    $(window).off('blur', windowBlurHandler).off('focus', windowFocusHandler);
+
     };
 
     /**
